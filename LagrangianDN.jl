@@ -1,52 +1,6 @@
-using ComponentArrays, LinearAlgebra, DiffEqFlux, OrdinaryDiffEq, ForwardDiff, Zygote, Random
+using Lux, LuxCore, ForwardDiff, ReverseDiff, Zygote, Enzyme
 
-# function EulerLagrange!(lagrangian, dstate, state, p, t)
-#     q = state[1, :]
-#     qdot = state[2, :]
-
-#     dLdq = ForwardDiff.gradient(q -> lagrangian(hcat(q, qdot), p, t), q)
-#     d_dLdqdot_dq = ForwardDiff.jacobian(q -> ForwardDiff.gradient(qdot -> lagrangian(hcat(q, qdot), p, t), qdot), q)
-#     H = ForwardDiff.hessian(qdot -> lagrangian(hcat(q, qdot), p, t), qdot)
-
-#     dstate[1, :] = qdot
-#     dstate[2, :] = H \ (dLdq - d_dLdqdot_dq * qdot)
-# end
-
-# function EulerLagrange_wrapper(lagrangian)
-#     return function (dstate, state, p, t)
-#         return EulerLagrange!(lagrangian, dstate, state, p, t)
-#     end
-# end
-
-"""
-    LagrangianNN(model; ad = AutoForwardDiff())
-
-Constructs a Lagrangian Neural Network. This neural network is useful for learning
-symmetries and conservation laws by supervision on the gradients of the trajectories. It
-takes as input a concatenated vector of length `2n` containing the position (of size `n`)
-and momentum (of size `n`) of the particles. It then returns the time derivatives for
-position and momentum.
-
-!!! note
-
-    This doesn't solve the Lagrangian Problem. Use [`NeuralLagrangianDE`](@ref)
-    for such applications.
-
-Arguments:
-
- 1. `model`: A `Flux.Chain` or `Lux.AbstractExplicitLayer` neural network that returns the
-    Lagrangian of the system.
- 2. `ad`: The autodiff framework to be used for the internal Lagrangian computation. The
-    default is `AutoForwardDiff()`.
-
-!!! note
-
-    If training with Zygote, ensure that the `chunksize` for `AutoForwardDiff` is set to
-    `nothing`.
-
-"""
-struct LagrangianNN{M <: LuxCore.AbstractExplicitLayer} <:
-                 Lux.AbstractExplicitContainerLayer{(:model,)}
+struct LagrangianNN{M <: LuxCore.AbstractExplicitLayer} <: Lux.AbstractExplicitContainerLayer{(:model,)}
     model::M
     ad
 end
@@ -57,41 +11,32 @@ function LagrangianNN(model; ad = AutoForwardDiff())
     return LagrangianNN(model, ad)
 end
 
-function (lnn::LagrangianNN{ <: LuxCore.AbstractExplicitLayer})(state, ps, st)
-    model = StatefulLuxLayer(lnn.model, nothing, st)
-    return model(state, ps)[1], model.st
+function (lnn::LagrangianNN{ <: LuxCore.AbstractExplicitLayer})(state, p, st)
+    model = Lux.StatefulLuxLayer(lnn.model, nothing, st)
+    return model(state, p)[1], model.st
 end
 
+
+using LinearAlgebra
+
 function EulerLagrange(lnn::LagrangianNN{ <: LuxCore.AbstractExplicitLayer}, st)
-    function (dstate, state, ps, t)
+    function (dstate, state, p, t)
         q = state[1, :]
         qdot = state[2, :]
         
-        dLdq = ForwardDiff.gradient(q -> first(lnn(vcat(q, qdot), ps, st)), q)
-        d_dLdqdot_dq = ForwardDiff.jacobian(q -> ForwardDiff.gradient(qdot -> first(lnn(vcat(q, qdot), ps, st)), qdot), q)        
-        H = ForwardDiff.hessian(qdot -> first(lnn(vcat(q, qdot), ps, st)), qdot)
+        dLdq = ForwardDiff.gradient(q -> first(lnn(vcat(q, qdot), p, st)), q)
+        d_dLdqdot_dq = ForwardDiff.jacobian(q -> ForwardDiff.gradient(qdot -> first(lnn(vcat(q, qdot), p, st)), qdot), q)      
+        lambda = 1.e-3  
+        H = ForwardDiff.hessian(qdot -> first(lnn(vcat(q, qdot), p, st)), qdot) + lambda * I
         
         dstate[1, :] = qdot
-        dstate[2, :] = pinv(H) * (dLdq - d_dLdqdot_dq * qdot)
+        dstate[2, :] = H \ (dLdq - d_dLdqdot_dq * qdot)
     end
 end
 
 
-"""
-    NeuralLagrangianDE(model, tspan, args...; kwargs...)
+using OrdinaryDiffEq, DiffEqFlux
 
-Constructs a Neural Lagrangian DE Layer for solving Lagrangian Problems parameterized by a
-Neural Network [`LagrangianNN`](@ref).
-
-Arguments:
-
-  - `model`: A Flux.Chain, Lux.AbstractExplicitLayer, or Lagrangian Neural Network that
-    predicts the Lagrangian of the system.
-  - `tspan`: The timespan to be solved on.
-  - `kwargs`: Additional arguments splatted to the ODE solver. See the
-    [Common Solver Arguments](https://docs.sciml.ai/DiffEqDocs/stable/basics/common_solver_opts/)
-    documentation for more details.
-"""
 struct NeuralLagrangianDE{M <: LagrangianNN} <: DiffEqFlux.NeuralDELayer
     model::M
     tspan
@@ -100,51 +45,78 @@ struct NeuralLagrangianDE{M <: LagrangianNN} <: DiffEqFlux.NeuralDELayer
 end
 
 function NeuralLagrangianDE(model, tspan, args...; ad = AutoForwardDiff(), kwargs...)
-    hnn = model isa LagrangianNN ? model : LagrangianNN(model; ad)
-    return NeuralLagrangianDE(hnn, tspan, args, kwargs)
+    lnn = model isa LagrangianNN ? model : LagrangianNN(model; ad)
+    return NeuralLagrangianDE(lnn, tspan, args, kwargs)
 end
 
 function (nlde::NeuralLagrangianDE)(state, ps, st)
-    prob = ODEProblem(EulerLagrange(nlde.model, st), state, nlde.tspan, ps)
+    prob = OrdinaryDiffEq.ODEProblem(EulerLagrange(nlde.model, st), state, nlde.tspan, ps)
     sensealg = InterpolatingAdjoint(; autojacvec = ZygoteVJP())
     return Array(OrdinaryDiffEq.solve(prob, nlde.args...; sensealg, nlde.kwargs...)), st
 end
 
-tspan = (0.0f0, 1.0f0)
-tsteps = range(tspan[1], tspan[2]; length = 64)
-state = [1.0 2.0 4.0; 3.0 2.0 1.2]
-dstate = state
 
-lnn = LagrangianNN(Chain(Dense(6 => 50, tanh), Dense(50 => 1)); ad = AutoForwardDiff())
-ps, st = Lux.setup(Random.default_rng(), lnn)
+using Plots
+
+function trueODE(du, u, p, t)
+    du[1] = u[2]
+    du[2] = - 0.5 * 30 * u[1]
+end
+
+u0 = Float32[2.0; -0.3]
+tspan = (0.0, 1.0)
+
+datasize = 30
+tsteps = range(tspan[1], tspan[2]; length = datasize)
+
+true_ode_prob = ODEProblem(trueODE, u0, tspan)
+println("Solving the trueODE...")
+true_sol = Array(solve(true_ode_prob, Tsit5(); saveat = tsteps))
+println("Done.")
+
+using Random, ComponentArrays, Flux
+
+rng = Random.default_rng()
+
+println("Setting up LNN and NLDE...")
+lnn = LagrangianNN(Flux.Chain(Flux.Dense(2 => 10, tanh), Flux.Dense(10 => 1)); ad = AutoForwardDiff())
+ps, st = Lux.setup(rng, lnn)
 ps = ps |> ComponentArray
-
-# println(first(lnn(state[:], ps, st)))
-println(EulerLagrange(lnn, st)(dstate, state, ps, tspan))
-
 model = NeuralLagrangianDE(lnn, tspan, Tsit5(); saveat = tsteps)
-xpred = first(model(state, ps, st))[1, 1, :]
-println(xpred)
+println("Done.")
 
-using Plots 
-plt = scatter(tsteps, xpred)
-display(plt)
-# model = NeuralLagrangianDE(lnn, tspan, Tsit5(); saveat = tsteps)
+function loss(p)
+    pred, _ = model(u0, p, st)
+    loss = sum(abs2, true_sol .- pred)
+    return loss, pred
+end
 
-# println(model([1.0; 2.0], ps, st))
+callback = function (p, l, pred)
+    println("loss ", l)
+    return false
+end
 
-# opt = Optimisers.Adam(0.01)
-# st_opt = Optimisers.setup(opt, ps)
-# loss(data, target, ps) = mean(abs2, first(model(state, ps, st)) .- target)
+println("Solving the LNN...")
+l, pred = loss(ps)
+println("Done.")
+callback(ps, l, pred)
+# println("Plotting...")
+# plt = scatter(tsteps, true_sol[1, :]; label = "data")
+# scatter!(plt, tsteps, pred[1, :]; label = "prediction")
+# display(plt)
+# println("Done.")
 
-# initial_loss = loss(data, target, ps)
-# println(initial_loss)
 
-# for epoch in 1:100
-#     global ps, st_opt
-#     gs = last(Zygote.gradient(loss, data, target, ps))
-#     st_opt, ps = Optimisers.update!(st_opt, ps, gs)
-# end
+using Optimization, OptimizationOptimisers
 
-# final_loss = loss(data, target, ps)
+println("Setting up OptProb...")
+adtype = Optimization.AutoForwardDiff()
+optf = Optimization.OptimizationFunction((u, p) -> loss(u), adtype)
+optprob = Optimization.OptimizationProblem(optf, ps)
+println("Done.")
 
+println("Solving the OptProb...")
+result_neuralode = Optimization.solve(optprob, OptimizationOptimisers.Adam(0.05); callback = callback, maxiters = 15)
+println("Done.")
+l, pred = loss(ps)
+callback(ps, l, pred)
