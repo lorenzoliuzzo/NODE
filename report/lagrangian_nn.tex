@@ -1,0 +1,58 @@
+% lagrangian.tex
+\section{Lagrangian Neural Network}
+Since both residual and neural ODEs are based on the evolution of a state, 
+it could be interesting to delve deeper into the connection between these two approaches and the formulation of the evolution of a physical system given by classical mechanics.
+
+\subsection{Variational principles}
+Variational principles aim to globally characterize the trajectory of an object in motion from an initial to a final state 
+using some stationarity property with respect to a family of possible movements.
+\begin{definition}(Lagrangian)
+    The Lagrangian $\lagrangian$ is a function of the generalized coordinates $\mathbf{q}$, velocities $\dot{\mathbf{q}} \equiv \timeder{\mathbf{q}}$ and time $t$:
+    $$\lagrangian : \mathbb{R}^n \times \mathbb{R}^n \times \mathbb{R} \rightarrow \mathbb{R}$$
+    The union $\mathbf{z} = (\mathbf{q}, \dot{\mathbf{q}})$ form a state in the phase space.
+\end{definition}
+
+\begin{theorem}(Principle of Stationary Action)
+    Consider a Lagrangian system over a fixed time interval $[t_0, t_1]$ and the family of movements $\mathbf{q}(t)$ 
+    whose satisfy the boundary conditions $\mathbf{q}(t_0) = \mathbf{q}_0$, $\mathbf{q}(t_1) = \mathbf{q}_1$. 
+    The Hamiltonian action $\mathcal{S}$ is a functional defined as the integral of the Lagrangian $\mathcal{L}$ of the system over time:
+    $$\mathcal{S}[\mathbf{q}] \equiv \int_{t_0}^{t_1} dt\ \lagrangian(\mathbf{q}(t), \dot{\mathbf{q}}(t), t)$$
+    Natural movements $\mathbf{\tilde{q}}$ are those for which the action has an extremum, such that
+    $$\delta S[\mathbf{\tilde{q}}] = 0$$
+\end{theorem}
+
+\begin{theorem}(Euler-Lagrange constraints)
+    According to the principle of stationary action, for a natural movement $\mathbf{q}$ over a fixed time interval $[t_0, t_1]$, 
+    from $\mathbf{q}(t_0) = \mathbf{q}_0$ to $\mathbf{q}(t_1) = \mathbf{q}_1$, it follows that
+    $$
+      \delta S = \int_{t_0}^{t_1} dt \left( \parder{\lagrangian}{\mathbf{q}} \delta \mathbf{q} + \parder{\lagrangian}{\dot{\mathbf{q}}} \delta \dot{\mathbf{q}} \right) = \int_{t_0}^{t_1} dt \left( \parder{\lagrangian}{\mathbf{q}} - \timeder{\parder{\lagrangian}{\dot{\mathbf{q}}}} \right) \delta \mathbf{q} + \parder{\lagrangian}{\dot{\mathbf{q}}} \delta \mathbf{q} \Big\vert_{t_0}^{t_1} = 0
+    $$
+    The boundary term vanishes to satisfy boundary conditions, whilst the integral vanishing for any variation $\delta \mathbf{q}$, as per Euler's theorem,
+	implies that movements must satisfy the differential equations, known as Euler-Lagrange equations, given by
+    $$\parder{\lagrangian}{\mathbf{q}} - \timeder{\parder{\lagrangian}{\dot{\mathbf{q}}}} = 0$$
+\end{theorem} 
+
+\subsection{LNN architecture}
+What the Principle of Stationary Action is claiming is that, for a generic system, Nature herself optimizes some cost function of the system and,
+according to the definition of the cost function for a continuous system \eqref{eq:cost_function}, 
+the Hamiltonian Action $\mathcal{S}$ could be indeed thought as the most natural cost function of a system, with the Lagrangian $\mathcal{L}$ as loss function.
+That is the basic definition of a Lagrangian Neural Network (LNN), a Neural ODE network build upon a parameterized Lagrangian $\mathcal{L}_{\boldsymbol{\theta}}$ 
+that satisfies the Euler-Lagrange constraints. \\
+% Rewriting these equations in vector form and expanding the total derivative using the chain rule yields a second-order differential equation in $\mathbf{q}$:
+In fact, Euler-Lagrange equations can be rewritten as a second order differential equation in the generalized coordinates $\mathbf{q}$ by expanding the total derivative using the chain rule:
+$$
+\timeder{\nabla_{\dot{\mathbf{q}}} \lagrangian} 
+= (\nabla_{\dot{\mathbf{q}}} \nabla_{\dot{\mathbf{q}}}^T \lagrangian) \ddot{\mathbf{q}} + (\nabla_\mathbf{q} \nabla_{\dot{\mathbf{q}}}^T \lagrangian) \dot{\mathbf{q}} 
+= \nabla_\mathbf{q} \lagrangian 
+$$
+If the Hessian matrix $\nabla_{\dot{\mathbf{q}}} \nabla_{\dot{\mathbf{q}}}^T \lagrangian$ is invertible, 
+a condition that always holds for natural Lagrangian systems, then the second order differential equation can be solved for $\ddot{\mathbf{q}}$. \\
+It follows that, given an initial phase state $\mathbf{x}_0 \equiv (\mathbf{q}_0, \dot{\mathbf{q}}_0)$, 
+the ODE defined in \eqref{eq:ode} for a Neural ODE network can be expanded for a Lagrangian Neural Network 
+with a parameterized Lagrangian $\mathcal{L}_{\boldsymbol{\theta}}$ of the system as
+\begin{equation}
+    \timeder{\mathbf{x}} = \mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}) = \left( \dot{\mathbf{q}}, \ddot{\mathbf{q}} \right) = \left( \dot{\mathbf{q}}, (\nabla_{\dot{\mathbf{q}}} \nabla_{\dot{\mathbf{q}}}^T \mathcal{L}_{\boldsymbol{\theta}})^{-1} \left[ \nabla_\mathbf{q} \mathcal{L}_{\boldsymbol{\theta}} - (\nabla_\mathbf{q} \nabla_{\dot{\mathbf{q}}}^T \mathcal{L}_{\boldsymbol{\theta}}) \dot{\mathbf{q}} \right] \right)
+    \quad \text{with} \quad \mathbf{x}(t_0) = \mathbf{x}_0
+\end{equation}
+
+\subsection{Training LNNs}

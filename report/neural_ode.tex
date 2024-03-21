@@ -1,0 +1,97 @@
+% neural_ode.tex
+\section{Ordinary Differential Equations and Neural Networks}
+An ordinary differential equation (ODE) is an equation that describes the relationship between a function and its total derivatives.
+A neural network is a composition of $L$ blocks, parameterized by a vector of parameters $\boldsymbol{\theta}$
+$$ \hat{h}: \mathbb{K}^{M} \to \mathbb{K}^{N} \quad 
+\hat{h}(\mathbf{x}; \boldsymbol{\theta}) = h^{(L)} \circ \dots \circ h^{(1)}(\mathbf{x}; \boldsymbol{\theta}) \quad 
+\boldsymbol{\theta} = (\boldsymbol{\theta}_{1}, \dots, \boldsymbol{\theta}_{L}) \in \mathbb{K}^{P} $$
+where each block is a function $h^{(l)}: \mathbb{K}^{M'} \to \mathbb{K}^{N'}$ parameterized by the component $\boldsymbol{\theta}_{l} \in \mathbb{K}^{P'}$.
+
+\subsection{Residual Neural Network}
+A residual neural network (RNN) uses building blocks of the form $h(\mathbf{x}; \boldsymbol{\theta}) = \mathbf{x} + \mathbf{f}(\mathbf{x}; \boldsymbol{\theta})$, where 
+$\mathbf{f}$ is some differentiable non-linear function of $\mathbf{x}$, parameterized by a vector $\boldsymbol{\theta}$, which preserves the input dimensionality. 
+These blocks are then composed in a sequence of $N$ layers, as
+\begin{equation}
+	\label{eq:RNN}
+	\mathbf{x}_{t+1} = \mathbf{x}_{t} + \Delta \mathbf{x}_{t} \qquad \Delta \mathbf{x}_{t} = \mathbf{f}_{t}(\mathbf{x}_{t}; \boldsymbol{\theta}_{t}) \qquad t=0, \dots, N-1
+\end{equation}
+The function $\mathbf{f}_{t}$ is called the residual function of the $t$-th layer and it is often chosen to be the same for all layers.
+This process reseambles the discretization of the evolution of a dynamical system, where $\Delta \mathbf{x}_{t}$ is the increment of the state $\mathbf{x}_{t}$ at time $t$. \\
+In particular, one could observe that the equation \eqref{eq:RNN} is the first-order Euler's method for solving ordinary differential equations with a fixed step size $\Delta t = 1$.
+The idea behind Neural ODE network is to extend the residual network to a continuous dynamical system. 
+
+\subsection{Neural ODE network}
+Consider a state $\mathbf{x} \in \mathbb{K}^{M}$ whose dynamic is defined by an initial value problem for a continuous function of the state and
+optionally some $t \in \mathbb{R}$, parameterized by some parameter vector $\boldsymbol{\theta} \in \mathbb{K}^{P}$, such as
+\begin{equation}
+  \label{eq:ODE}
+  \timeder{\mathbf{x}} = \mathbf{f}(\mathbf{x}, t; \boldsymbol{\theta}) \quad \text{with} \quad \mathbf{x}(t_0) = \mathbf{x}_0 % \qquad \mathbf{f}: \mathbb{K}^{M} \times \mathbb{R} \to \mathbb{K}^{M}
+\end{equation}
+The ODE-net transformation $\hat{h}: \mathbb{R} \to \mathbb{K}^{M}$ is given indirectly as the solution of the IVP:
+\begin{equation}
+  \label{eq:ODE-net}  
+  \hat{h}(t; \mathbf{x}_0, \boldsymbol{\theta}) \equiv \mathbf{x}(t; \boldsymbol{\theta}) = \mathbf{x}_0 + \int_{t_0}^{t} d\tau\ \mathbf{f}(\mathbf{x}, \tau; \boldsymbol{\theta})
+\end{equation}
+A continuous transformation of the state would require a RNN to have an infinite number of layers, 
+while a Neural ODE network has a single implicit layer, that employs a black-box solver to perform the integration.
+In a sense, the amount of steps it takes to solve the ODE could be thought as the depth of the network.\\
+As it is presented by \cite{chen2019neural}, this black-box approach yields the possibility of choosing adaptive-step integrators,
+which leads to a trade-off between accuracy and computational cost. 
+Perhaps, one can even train a Neural ODE network with high accuracy and adjust it to a lower accuracy at test time. \\
+Another advantage of Neural ODE networks over residual networks is that they are continuous time-series models and thus can be trained on irregularly sampled data. \\
+The model network architecture is also invertible and the inverse of the transformation $h$ can be computed just by solving the ODE backwards in time. 
+This is useful for tasks such as generative modeling, where the goal is to sample from a distribution over the input space, and normalizing flows, 
+where the goal is to learn a distribution over the input space by transforming a simple base distribution.\\ 
+
+\subsection{Adjoint Sensitivity Method}
+To train a neural network, one needs to define a cost function and minimize it with respect to the network parameters $\boldsymbol{\theta}$.
+The cost function $\mathcal{C}$ for a neural ODE network can be defined as a functional 
+acting on some loss function $l: \mathbb{K}^M \times \mathbb{R} \to \mathbb{R}$ over the whole state trajectory
+\begin{equation}
+  \label{eq:cost_function}
+  \mathcal{C}(\mathbf{x}, t; \mathbf{x}_0, \boldsymbol{\theta}) \equiv \int_{t_0}^{t} d\tau\ l(\hat{h}_{\boldsymbol{\theta}}(\mathbf{x}_0 , \tau), \tau)
+\end{equation}
+% Given initial state $\mathbf{x}_0$, to evaluate this functional at some $t$, one must first integrate the system of $M$ ordinary differential equations from a  and obtain the final state $\mathbf{x}(t)$.
+% Because the ODE system in \eqref{eq:ODE} is implicitly defined by , t
+It follows that the initial value problem in \eqref{eq:ODE} can be formulated as an optimization problem with equality constraints for the function $\mathbf{f}$:
+\begin{equation}
+  \label{eq:opt_problem}
+  \mathbf{x}^* = \arg\min_{\boldsymbol{\theta}} \mathcal{C}(\mathbf{x}, t; \mathbf{x}_0, \boldsymbol{\theta}) \quad \text{subject to} \quad \mathbf{g}(\mathbf{x}, t; \boldsymbol{\theta}) \equiv \mathbf{f}(\mathbf{x}, t) - \timeder{\mathbf{x}} = 0
+\end{equation}
+The problem is then addressed introducing the Lagrangian function $\mathcal{L}$ with a continuous multiplier $\boldsymbol{\lambda} \in \mathbb{K}^M$:
+$$
+\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}, t; \mathbf{x}_0, \boldsymbol{\theta}) = \mathcal{C}(\mathbf{x}, t; \mathbf{x}_0, \boldsymbol{\theta}) + \int_{t_0}^{t} d\tau\ \boldsymbol{\lambda}^T(\tau) \mathbf{g}(\mathbf{x}, \tau; \boldsymbol{\theta})
+$$
+The sensitivity of $\mathcal{L}$ with respect to the network parameter $\boldsymbol{\theta}$ can be obtained as
+\begin{align*}
+  \totalder{\mathcal{L}}{\boldsymbol{\theta}} 
+  &= \int_{t_0}^{t} d\tau \left[\parder{l}{\boldsymbol{\theta}} + \parder{l}{\mathbf{x}}\totalder{\mathbf{x}}{\boldsymbol{\theta}} + \boldsymbol{\lambda}^T \left(\parder{\mathbf{f}}{\boldsymbol{\theta}} + \parder{\mathbf{f}}{\mathbf{x}}\totalder{\mathbf{x}}{\boldsymbol{\theta}} - \totalder{}{\tau}\totalder{\mathbf{x}}{\boldsymbol{\theta}} \right) \right] \\
+  &= \int_{t_0}^{t} d\tau \left[\parder{l}{\boldsymbol{\theta}} + \boldsymbol{\lambda}^T \parder{\mathbf{f}}{\boldsymbol{\theta}} + \left(\parder{l}{\mathbf{x}} + \boldsymbol{\lambda}^T \parder{\mathbf{f}}{\mathbf{x}} - \boldsymbol{\lambda}^T \totalder{}{\tau}\right) \totalder{\mathbf{x}}{\boldsymbol{\theta}} \right]                                 
+\end{align*}
+In the context of conventional neural networks, the application of automatic differentiation facilitates the propagation over the network 
+of the expression $\totalder{\mathbf{x}}{\boldsymbol{\theta}}$, which represents how the output of the network depends on the parameters.
+However, in the case of a ODE-net a complexity arises from the usage of a black-box solver to determine the state, 
+rendering it nontrivial and inefficient to backpropagate through.\\
+Integrating by parts, the sensitivity of the Lagrangian $\mathcal{L}$ can be rewritten as 
+$$
+\totalder{\mathcal{L}}{\boldsymbol{\theta}} = \int_{t_0}^{t} d\tau \left[\parder{l}{\boldsymbol{\theta}} + \boldsymbol{\lambda}^T \parder{\mathbf{f}}{\boldsymbol{\theta}} + \left(\parder{l}{\mathbf{x}} + \boldsymbol{\lambda}^T \parder{\mathbf{f}}{\mathbf{x}} + \totalder{}{\tau}\boldsymbol{\lambda}^T\right) \totalder{\mathbf{x}}{\boldsymbol{\theta}} \right] - \boldsymbol{\lambda}^T \totalder{\mathbf{x}}{\boldsymbol{\theta}} \Big\vert_{t_0}^{t} \\
+$$
+and, given the sensitivity of the initial state $\totalder{\mathbf{x}_0}{\boldsymbol{\theta}}$, 
+it is possible to write an equivalent system for $\totalder{\mathbf{x}}{\boldsymbol{\theta}}$ as a terminal value problem for an adjoint state $\boldsymbol{\lambda}$:
+\begin{equation}
+  \label{eq:adjoint_ode}
+  \totalder{}{\tau}\boldsymbol{\lambda}^{T}(\tau) = - \boldsymbol{\lambda}^{T}(\tau) \parder{\mathbf{f}(\mathbf{x}, \tau)}{\mathbf{x}} - \parder{l(\mathbf{x}, \tau)}{\mathbf{x}} \quad \text{with} \quad \boldsymbol{\lambda}^{T}(t) = \mathbf{0}
+\end{equation}
+Furthermore, the sensitivity of the cost function $\mathcal{C}$ with respect to $\boldsymbol{\theta}$ is obtained from the Lagrangian sensitivity by
+integrating the adjoint system from the terminal condition $\boldsymbol{\lambda}^{T}(t) = \mathbf{0}$ backward to $\boldsymbol{\lambda}_{0}^{T} \equiv \boldsymbol{\lambda}^{T}(t_0)$: 
+\begin{equation}
+  \label{eq:loss_sensitivity}
+  \totalder{\mathcal{C}(\mathbf{x}; \boldsymbol{\theta})}{\boldsymbol{\theta}} 
+  = \totalder{\mathcal{L}(\mathbf{x}, \boldsymbol{\lambda}; \boldsymbol{\theta})}{\boldsymbol{\theta}} 
+  = \boldsymbol{\lambda}^T_0 \totalder{\mathbf{x}_0}{\boldsymbol{\theta}} - \int_{t}^{t_0} d\tau \left(\parder{l}{\boldsymbol{\theta}} + \boldsymbol{\lambda}^T \parder{\mathbf{f}}{\boldsymbol{\theta}}\right)  
+\end{equation}
+This method, known as the adjoint sensitivity method, allows efficient calculations of the sensitivity without storing any intermediate states during the forward pass, making neural ODE networks trainable with a constant memory cost.\\
+
+% \subsection{Approximation capabilities}
+% As proved in \cite{lin2018resnet}, a linear layer preceeded by a deep sequence of residual blocks with only one neuron in the hidden layer
+% is a universal approximator for Lebesque-integrable functions $\mathbb{R}^{p} \to \mathbb{R}$.\\

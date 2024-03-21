@@ -1,0 +1,101 @@
+\documentclass[twoside,11pt]{article}
+
+% Any additional packages needed should be included after jmlr2e.
+% Note that jmlr2e.sty includes epsfig, amssymb, natbib and graphicx,
+% and defines many common macros, such as 'proof' and 'example'.
+
+\usepackage{jmlr2e}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{lipsum}
+\usepackage{float}  
+\usepackage{graphicx}
+
+\usepackage{hyperref}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,  % Change the color for internal links
+    citecolor=black, % Change the color for citation links
+    urlcolor=blue     % Change the color for external links
+}
+
+\definecolor{mygreen}{rgb}{0,0.6,0}
+
+\lstset{ 
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}; should come as last argument
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+%   firstnumber=1000,                % start line enumeration with line 1000
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Python,                 % the language of the code
+  morekeywords={*,...},            % if you want to add more keywords to the set
+%   numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+%   numbersep=5pt,                   % how far the line-numbers are from the code
+%   numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+%   showtabs=false,                  % show tabs within strings adding particular underscores
+%   stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,	                   % sets default tabsize to 2 spaces
+%   title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+% Definitions of handy macros can go here
+\newcommand{\lagrangian}{{\cal L}}
+\newcommand{\parder}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\totalder}[2]{\frac{d#1}{d#2}}
+\newcommand{\timeder}[1]{\frac{d}{dt}#1}
+
+
+\begin{document}
+
+\title{
+  Neural ODE Applications: \\ 
+  Lagrangian Neural Networks
+}
+
+\author{
+  \name Lorenzo Liuzzo 
+  \email lorenzoliuzzo@outlook.com \\
+  \addr Department of Physics, University of Studies \\ Milan, Italy \\
+  \today
+}
+
+\maketitle
+
+\begin{abstract}
+  \lipsum[1]
+\end{abstract}
+
+% \begin{keywords}
+%   Neural ODE, 
+%   Adjoint Sensitivity, 
+%   LNN
+% \end{keywords}
+
+\input{introduction}
+\input{neural_ode}
+\input{lagrangian_nn}
+\newpage
+\input{conclusion}
+
+\newpage
+\nocite{*}
+\bibliography{main}
+
+% \appendix
+% \section*{Appendix}
+
+\end{document}
