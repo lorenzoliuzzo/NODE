@@ -1,1 +1,1 @@
-# Lagrangian and Hamiltonian Neural Ordinary Differential Equations (NODE)
+# Lagrangian and Hamiltonian Neural Ordinary Differential Equations (NODEs)
