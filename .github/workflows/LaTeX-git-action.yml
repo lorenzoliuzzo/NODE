@@ -3,7 +3,7 @@ name: Build LaTeX document
 on:   
   push:
     branches: ["main"]
-    paths: ["./report/**"] # This will trigger the workflow when anything in the 'report/' folder is modified
+    # paths: ["./report/**"] # This will trigger the workflow when anything in the 'report/' folder is modified
 
 jobs:
   build_latex:
