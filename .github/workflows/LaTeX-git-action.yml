@@ -22,7 +22,6 @@ jobs:
           args: |
             -interaction=nonstopmode
             -halt-on-error
-          extra_system_packages: texlive-bibtex-extra
       - name: Run BibTeX
         run: bibtex main.aux
         working-directory: ./report/
