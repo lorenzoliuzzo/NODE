@@ -13,19 +13,8 @@ jobs:
     steps:
       - name: Set up Git repository
         uses: actions/checkout@v4
+        
       - name: Compile LaTeX document
-        uses: xu-cheng/latex-action@v3
-        with:
-          root_file: main.tex
-          working_directory: ./report/
-          compiler: pdflatex
-          args: |
-            -interaction=nonstopmode
-            -halt-on-error
-      - name: Run BibTeX
-        run: bibtex main.aux
-        working-directory: ./report/
-      - name: Recompile LaTeX document after BibTeX
         uses: xu-cheng/latex-action@v3
         with:
           root_file: main.tex

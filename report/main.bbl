@@ -1,0 +1,71 @@
+\begin{thebibliography}{10}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Bradbury et~al.(2018)Bradbury, Frostig, Hawkins, Johnson, Leary,
+  Maclaurin, Necula, Paszke, Vander{P}las, Wanderman-{M}ilne, and
+  Zhang]{jax2018github}
+James Bradbury, Roy Frostig, Peter Hawkins, Matthew~James Johnson, Chris Leary,
+  Dougal Maclaurin, George Necula, Adam Paszke, Jake Vander{P}las, Skye
+  Wanderman-{M}ilne, and Qiao Zhang.
+\newblock {JAX}: composable transformations of {P}ython+{N}um{P}y programs,
+  2018.
+\newblock URL \url{http://github.com/google/jax}.
+
+\bibitem[Cai(2022)]{cai2022vectorized}
+Jack Cai.
+\newblock Vectorized adjoint sensitivity method for graph convolutional neural
+  ordinary differential equations, 2022.
+
+\bibitem[Cao et~al.(2003)Cao, Li, Petzold, and
+  Serban]{doi:10.1137/S1064827501380630}
+Yang Cao, Shengtai Li, Linda Petzold, and Radu Serban.
+\newblock Adjoint sensitivity analysis for differential-algebraic equations:
+  The adjoint dae system and its numerical solution.
+\newblock \emph{SIAM Journal on Scientific Computing}, 24\penalty0
+  (3):\penalty0 1076--1089, 2003.
+
+\bibitem[Chen et~al.(2019)Chen, Rubanova, Bettencourt, and
+  Duvenaud]{chen2019neural}
+Ricky T.~Q. Chen, Yulia Rubanova, Jesse Bettencourt, and David Duvenaud.
+\newblock Neural ordinary differential equations, 2019.
+
+\bibitem[Cranmer et~al.(2020)Cranmer, Greydanus, Hoyer, Battaglia, Spergel, and
+  Ho]{cranmer2020lagrangian}
+Miles Cranmer, Sam Greydanus, Stephan Hoyer, Peter Battaglia, David Spergel,
+  and Shirley Ho.
+\newblock Lagrangian neural networks, 2020.
+
+\bibitem[Johnson(2007)]{article}
+Steven Johnson.
+\newblock Notes on adjoint methods for 18.336, 2007.
+
+\bibitem[Lin and Jegelka(2018)]{lin2018resnet}
+Hongzhou Lin and Stefanie Jegelka.
+\newblock Resnet with one-neuron hidden layers is a universal approximator,
+  2018.
+
+\bibitem[Lutter et~al.(2019)Lutter, Ritter, and Peters]{lutter2019deep}
+Michael Lutter, Christian Ritter, and Jan Peters.
+\newblock Deep lagrangian networks: Using physics as model prior for deep
+  learning, 2019.
+
+\bibitem[Matsubara et~al.(2021)Matsubara, Miyatake, and
+  Yaguchi]{NEURIPS2021_adf8d7f8}
+Takashi Matsubara, Yuto Miyatake, and Takaharu Yaguchi.
+\newblock Symplectic adjoint method for exact gradient of neural ode with
+  minimal memory.
+\newblock In M.~Ranzato, A.~Beygelzimer, Y.~Dauphin, P.S. Liang, and J.~Wortman
+  Vaughan, editors, \emph{Advances in Neural Information Processing Systems},
+  volume~34, pages 20772--20784. Curran Associates, Inc., 2021.
+
+\bibitem[Zhang et~al.(2020)Zhang, Gao, Unterman, and
+  Arodz]{zhang2020approximation}
+Han Zhang, Xi~Gao, Jacob Unterman, and Tom Arodz.
+\newblock Approximation capabilities of neural odes and invertible residual
+  networks, 2020.
+
+\end{thebibliography}
